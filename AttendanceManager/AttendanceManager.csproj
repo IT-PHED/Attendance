@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.72" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
+    <PackageReference Include="MySqlConnector" Version="2.4.0" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="wwwroot\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <Target Name="BuildFrontend" BeforeTargets="Build;Publish">
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)\DashboardApp" Command="npm install" />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)\DashboardApp" Command="npm run build" />
+  </Target>
+
+  <Target Name="CopyFrontendToWwwroot" AfterTargets="BuildFrontend">
+    <RemoveDir Directories="$(MSBuildProjectDirectory)\wwwroot\assets" />
+    <ItemGroup>
+      <FrontendDistFiles Include="$(MSBuildProjectDirectory)\DashboardApp\dist\**\*" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(FrontendDistFiles)"
+      DestinationFiles="@(FrontendDistFiles->'$(MSBuildProjectDirectory)\wwwroot\%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>
