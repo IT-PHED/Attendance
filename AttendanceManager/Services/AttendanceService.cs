@@ -14,10 +14,9 @@ namespace AttendanceManager.Services
         public async Task<(bool Success, string Message)> StoreAsync(Inttendance request)
         {
             var lastAttendance = await _db.QuerySingleAsync<Attendance>(
-                @"SELECT * FROM attendances
-                  WHERE staff = @Staff
-                  ORDER BY time DESC
-                  LIMIT 1;",
+                @"SELECT TOP (1) * FROM attendance
+                WHERE staff = @Staff
+                ORDER BY time DESC;",
                 new { Staff = request.Id });
 
             if (lastAttendance is null)
@@ -52,19 +51,17 @@ namespace AttendanceManager.Services
             if (day.HasValue)
             {
                 attendanceRecord = await _db.QuerySingleAsync<Attendance>(
-                    @"SELECT * FROM attendances
+                    @"SELECT TOP (1) * FROM attendance
                       WHERE staff = @Staff AND DATE(time) = @Day
-                      ORDER BY time DESC
-                      LIMIT 1;",
+                      ORDER BY time DESC;",
                     new { Staff = request.Id, Day = day.Value.Date });
             }
             else
             {
                 attendanceRecord = await _db.QuerySingleAsync<Attendance>(
-                    @"SELECT * FROM attendances
+                    @"SELECT TOP (1) * FROM attendance
                       WHERE staff = @Staff
-                      ORDER BY time DESC
-                      LIMIT 1;",
+                      ORDER BY time DESC;",
                     new { Staff = request.Id });
             }
 
@@ -74,7 +71,7 @@ namespace AttendanceManager.Services
             }
 
             await _db.ExecuteAsync(
-                @"UPDATE attendances
+                @"UPDATE attendance
                   SET timeout = @Timeout
                   WHERE id = @Id;",
                 new
@@ -89,10 +86,10 @@ namespace AttendanceManager.Services
         private async Task ClockInAsync(Inttendance request)
         {
             await _db.ExecuteAsync(
-                @"INSERT INTO attendances
-                  (staff, time, latitude, longitude, image, office_name, name, device_id)
+                @"INSERT INTO attendance
+                  (staff, time, latitude, longitude, image, office_name, name, device_id, hours_worked)
                   VALUES
-                  (@Staff, @Time, @Latitude, @Longitude, @Image, @OfficeName, @Name, @DeviceId);",
+                  (@Staff, @Time, @Latitude, @Longitude, @Image, @OfficeName, @Name, @DeviceId, 0);",
                 new
                 {
                     Staff = request.Id,
@@ -109,7 +106,7 @@ namespace AttendanceManager.Services
         private async Task UpdateClockInAsync(Inttendance request, Attendance lastAttendance)
         {
             await _db.ExecuteAsync(
-                @"UPDATE attendances
+                @"UPDATE attendance
                   SET time = @Time,
                       latitude = @Latitude,
                       longitude = @Longitude,

@@ -17,7 +17,7 @@ namespace AttendanceManager.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<Attendance>().ToTable("attendances");
+            modelBuilder.Entity<Attendance>().ToTable("attendance");
             modelBuilder.Entity<Office>().ToTable("offices");
             modelBuilder.Entity<User>().ToTable("users");
         }

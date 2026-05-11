@@ -14,6 +14,8 @@ var builderOptions = new WebApplicationOptions
 var builder = WebApplication.CreateBuilder(builderOptions);
 builder.WebHost.UseIISIntegration();
 
+builder.Logging.AddConsole();
+
 var configuredPort =
     Environment.GetEnvironmentVariable("PORT") ??
     builder.Configuration["Server:Port"];
@@ -30,9 +32,8 @@ builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("Database")));
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -49,6 +50,14 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+var appWebRoot = app.Environment.WebRootPath;
+var defaultIndexPath = appWebRoot is null ? null : Path.Combine(appWebRoot, "index.html");
+// app.Logger.LogInformation("Starting AttendanceManager in {Environment}", app.Environment.EnvironmentName);
+// app.Logger.LogInformation("ContentRootPath={ContentRootPath}, WebRootPath={WebRootPath}, WebRootExists={WebRootExists}", app.Environment.ContentRootPath, appWebRoot, appWebRoot != null && Directory.Exists(appWebRoot));
+// app.Logger.LogInformation("Default index.html path={IndexPath}, Exists={IndexExists}", defaultIndexPath, defaultIndexPath != null && File.Exists(defaultIndexPath));
+// app.Logger.LogInformation("Configured URLs: {Urls}", string.Join(',', app.Urls));
+// app.Logger.LogInformation("Server port env=PORT:{PortEnv}, config=Server:Port:{PortConfig}", Environment.GetEnvironmentVariable("PORT"), builder.Configuration["Server:Port"]);
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -58,11 +67,16 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors("AllowAll");
+
+app.UseRouting();
+
 app.UseAuthorization();
+
+app.MapControllers(); // MUST come before fallback
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.MapControllers();
 app.MapFallbackToFile("index.html");
 
 app.Run();

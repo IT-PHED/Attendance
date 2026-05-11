@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AttendanceManager.Models
 {
-    [Table("attendances")]
+    [Table("attendance")]
     public class Attendance
     {
         [Key]
@@ -54,11 +54,8 @@ namespace AttendanceManager.Models
     }
 
 
-
-
     public class Inttendance
     {
-    
         public string Id { get; set; } = string.Empty;
         public DateTime Time { get; set; }
         public DateTime? Timeout { get; set; }
@@ -68,8 +65,20 @@ namespace AttendanceManager.Models
         public string? office { get; set; }
         public string? Name { get; set; }
         public string key { get; set; } = string.Empty;
+        
+    }
 
-
+    public class InttendanceFormat
+    {
+        public string Id { get; set; } = string.Empty;
+        public String Time { get; set; } = string.Empty;
+        public String? Timeout { get; set; }
+        public decimal lat { get; set; }
+        public decimal @long { get; set; }
+        public string? Image { get; set; }
+        public string? office { get; set; }
+        public string? Name { get; set; }
+        public string key { get; set; } = string.Empty;
         
     }
 }

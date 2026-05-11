@@ -38,10 +38,10 @@ namespace AttendanceManager.Controllers
         public async Task<JsonResult> GetAStaff([FromQuery] string staff_number)
         {
             var sql = @"
-                SELECT email, name, staff_number AS StaffNumber
-                FROM users
-                WHERE staff_number = @StaffNumber
-                LIMIT 1;";
+                SELECT TOP (1) EMAIL, NAME, STAFF_ID AS StaffNumber
+                FROM TBL_PROFILE
+                WHERE STAFF_ID = @StaffNumber
+                AND IS_ACTIVE = 1;";
 
             var user = await _db.QuerySingleAsync<StaffResponse>(
                 sql,
@@ -72,7 +72,7 @@ namespace AttendanceManager.Controllers
                     device_id AS DeviceId,
                     COALESCE(name, '') AS Name,
                     version AS Version
-                FROM attendances
+                FROM attendance
                 WHERE staff = @StaffId
                     AND DATE(time) BETWEEN @FromDate AND @ToDate
                 ORDER BY time DESC;";

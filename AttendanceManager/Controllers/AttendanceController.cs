@@ -1,6 +1,7 @@
 ﻿using AttendanceManager.Models;
 using AttendanceManager.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
 
 namespace AttendanceManager.Controllers
 {
@@ -60,9 +61,63 @@ namespace AttendanceManager.Controllers
 
         // POST api/v1/attendance/store
         [HttpPost("store")]
-        public async Task<JsonResult> Store([FromBody] Inttendance request)
+        public async Task<JsonResult> Store([FromBody] InttendanceFormat request)
         {
-            var result = await _attendanceService.StoreAsync(request);
+            var requestedWithHeader = HttpContext.Request.Headers["X-Requested-With"].ToString();
+            var hasXmlHttpHeader = requestedWithHeader.Equals("XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
+            if (!hasXmlHttpHeader)
+            {
+                return CorsJson(new
+                {
+                    success = false,
+                    message = "Invalid request: Missing required X-Requested-With header"
+                }, StatusCodes.Status400BadRequest);
+            }
+
+            DateTime parsedTime;
+            DateTime? parsedTimeout = null;
+
+            try
+            {
+                parsedTime = DateTime.ParseExact(
+                    request.Time,
+                    "yyyy-MM-dd HH:mm:ss",
+                    CultureInfo.InvariantCulture
+                );
+
+                if (!string.IsNullOrEmpty(request.Timeout))
+                {
+                    parsedTimeout = DateTime.ParseExact(
+                        request.Timeout,
+                        "yyyy-MM-dd HH:mm:ss",
+                        CultureInfo.InvariantCulture
+                    );
+                }
+            }
+            catch (FormatException)
+            {
+                return CorsJson(new
+                {
+                    success = false,
+                    message = "Invalid date format. Expected yyyy-MM-dd HH:mm:ss"
+                }, StatusCodes.Status400BadRequest);
+            }
+
+            var attendance = new Inttendance
+            {
+                Id = request.Id,
+                Time = parsedTime,
+                Timeout = parsedTimeout,
+                lat = request.lat,
+                @long = request.@long,
+                Image = request.Image,
+                office = request.office,
+                Name = request.Name,
+                key = request.key
+            };
+
+            var result = await _attendanceService.StoreAsync(attendance);
             if (!result.Success)
             {
                 return CorsJson(new { success = false, message = result.Message }, StatusCodes.Status404NotFound);
