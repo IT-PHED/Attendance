@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace AttendanceManager.Models
 {
@@ -74,12 +75,12 @@ namespace AttendanceManager.Models
         public String Time { get; set; } = string.Empty;
         public String? Timeout { get; set; }
         public decimal lat { get; set; }
+        [JsonPropertyName("long")]
         public decimal @long { get; set; }
         public string? Image { get; set; }
         public string? office { get; set; }
         public string? Name { get; set; }
         public string key { get; set; } = string.Empty;
-        
     }
 }
 

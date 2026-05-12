@@ -21,6 +21,7 @@ namespace AttendanceManager.Controllers
         {
             var sql = @"
                 SELECT 
+                    name AS OfficeDescription,
                     name AS Name,
                     address AS Address,
                     longitude AS Longitude,
@@ -31,6 +32,20 @@ namespace AttendanceManager.Controllers
                 sql);
 
             return CorsJson(offices);
+        }
+
+        [HttpGet("/api/v1/getStaff")]
+        public async Task<JsonResult> GetStaff()
+        {
+            var sql = @"
+                SELECT EMAIL, NAME, STAFF_ID AS StaffNumber
+                FROM TBL_PROFILE
+                WHERE IS_ACTIVE = 1;";
+
+            var users = await _db.QueryAsync<StaffResponse>(
+                sql);
+
+            return CorsJson(users);
         }
 
         // GET api/v1/getAStaff?staff_number=12345
@@ -61,8 +76,8 @@ namespace AttendanceManager.Controllers
             var sql = @"
                 SELECT
                     staff AS Staff,
-                    DATE_FORMAT(time, '%Y-%m-%d %H:%i:%s') AS Time,
-                    DATE_FORMAT(timeout, '%Y-%m-%d %H:%i:%s') AS Timeout,
+                    FORMAT(time, 'yyyy-MM-dd HH:mm:ss') AS Time,
+                    FORMAT(timeout, 'yyyy-MM-dd HH:mm:ss') AS Timeout,
                     COALESCE(hours_worked, '0') AS HoursWorked,
                     image AS Image,
                     latitude AS Latitude,
@@ -74,7 +89,7 @@ namespace AttendanceManager.Controllers
                     version AS Version
                 FROM attendance
                 WHERE staff = @StaffId
-                    AND DATE(time) BETWEEN @FromDate AND @ToDate
+                    AND CAST(time AS DATE) BETWEEN @FromDate AND @ToDate
                 ORDER BY time DESC;";
 
             var myAttendance = await _db.QueryAsync<MyAttendanceResponse>(
@@ -116,7 +131,7 @@ namespace AttendanceManager.Controllers
             }
 
             var results = await _db.QueryAsync<object>(
-                "CALL GetStaffAttendance(@From, @To, @StaffId);",
+                "EXEC GetStaffAttendance @From, @To, @StaffId;",
                 new
                 {
                     From = request.From,
@@ -149,8 +164,10 @@ namespace AttendanceManager.Controllers
 
         private sealed class OfficeResponse
         {
-            public string Name { get; set; } = string.Empty;
+            [JsonPropertyName("OfficeDescription")]
+            public string OfficeDescription { get; set; } = string.Empty;
             public string Address { get; set; } = string.Empty;
+            public string Name { get; set; } = string.Empty;
             public decimal Longitude { get; set; } = 0m;
             public decimal Latitude { get; set; } = 0m;
         }
@@ -174,6 +191,7 @@ namespace AttendanceManager.Controllers
             public double Latitude { get; set; }
             public double Longitude { get; set; }
             public int Id { get; set; }
+            [JsonPropertyName("office_name")]
             public string OfficeName { get; set; } = string.Empty;
             public string? DeviceId { get; set; }
             public string Name { get; set; } = string.Empty;

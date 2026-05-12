@@ -31,14 +31,14 @@ namespace AttendanceManager.Repository
 
         public async Task<List<dynamic>> GetAbsentStaffReportAsync(string date)
         {
-            var sql = "CALL AbsentStaffReport(@Date);";
+            const string sql = "EXEC AbsentStaffReport @Date;";
             var results = await _db.QueryAsync<dynamic>(sql, new { Date = date });
             return results.ToList();
         }
 
         private async Task<List<dynamic>> ExecuteTwoDateProcAsync(string procedureName, string from, string to)
         {
-            var sql = $"CALL {procedureName}(@From, @To);";
+            var sql = $"EXEC {procedureName} @From, @To;";
             var results = await _db.QueryAsync<dynamic>(sql, new { From = from, To = to });
             return results.ToList();
         }

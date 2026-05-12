@@ -10,10 +10,12 @@ namespace AttendanceManager.Controllers
     public class AttendanceController : ControllerBase
     {
         private readonly AttendanceService _attendanceService;
+        private readonly ILogger<AttendanceController> _logger;
 
-        public AttendanceController(AttendanceService attendanceService)
+        public AttendanceController(AttendanceService attendanceService, ILogger<AttendanceController> logger)
         {
             _attendanceService = attendanceService;
+            _logger = logger;
         }
 
         // POST api/v1/attendance/upload
@@ -68,39 +70,63 @@ namespace AttendanceManager.Controllers
 
             if (!hasXmlHttpHeader)
             {
-                return CorsJson(new
-                {
-                    success = false,
-                    message = "Invalid request: Missing required X-Requested-With header"
-                }, StatusCodes.Status400BadRequest);
+                _logger.LogInformation("Request came in from HR at {Timestamp}", DateTime.UtcNow);
             }
 
             DateTime parsedTime;
             DateTime? parsedTimeout = null;
+            DateTime now = DateTime.Now;
 
             try
             {
-                parsedTime = DateTime.ParseExact(
-                    request.Time,
+                var formats = new[]
+                {
                     "yyyy-MM-dd HH:mm:ss",
-                    CultureInfo.InvariantCulture
-                );
+                    "yyyy-MM-dd HH:mm:ss.fffffff",
+                    "yyyy-MM-ddTHH:mm:ss",
+                    "yyyy-MM-ddTHH:mm:ss.fff",
+                    "yyyy-MM-ddTHH:mm:ss.fffffff",
+                    "yyyy-MM-ddTHH:mm:ssZ",
+                    "yyyy-MM-ddTHH:mm:ss.fffZ",
+                    "yyyy-MM-ddTHH:mm:ss.fffffffZ",
+                    "yyyy-MM-ddTHH:mm:ssK",
+                    "yyyy-MM-ddTHH:mm:ss.fffK",
+                    "yyyy-MM-ddTHH:mm:ss.fffffffK"
+                };
+
+                if (!DateTime.TryParseExact(
+                    request.Time,
+                    formats,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                    out parsedTime))
+                {
+                    parsedTime = now;
+                }
 
                 if (!string.IsNullOrEmpty(request.Timeout))
                 {
-                    parsedTimeout = DateTime.ParseExact(
-                        request.Timeout,
-                        "yyyy-MM-dd HH:mm:ss",
-                        CultureInfo.InvariantCulture
-                    );
+                    if (DateTime.TryParseExact(
+                            request.Timeout,
+                            formats,
+                            CultureInfo.InvariantCulture,
+                            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                            out var tempTimeout))
+                    {
+                        parsedTimeout = tempTimeout;
+                    }
+                    else
+                    {
+                        parsedTimeout = now;
+                    }
                 }
             }
-            catch (FormatException)
+            catch
             {
                 return CorsJson(new
                 {
                     success = false,
-                    message = "Invalid date format. Expected yyyy-MM-dd HH:mm:ss"
+                    message = "Date parsing failed"
                 }, StatusCodes.Status400BadRequest);
             }
 

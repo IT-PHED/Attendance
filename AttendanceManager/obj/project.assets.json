@@ -28,6 +28,16 @@
           }
         }
       },
+      "Microsoft.AspNetCore.App.Internal.Assets/10.0.7": {
+        "type": "package",
+        "build": {
+          "build/Microsoft.AspNetCore.App.Internal.Assets.props": {},
+          "buildTransitive/Microsoft.AspNetCore.App.Internal.Assets.targets": {}
+        },
+        "buildMultiTargeting": {
+          "buildMultiTargeting/Microsoft.AspNetCore.App.Internal.Assets.targets": {}
+        }
+      },
       "Microsoft.AspNetCore.OpenApi/10.0.4": {
         "type": "package",
         "dependencies": {
@@ -934,6 +944,29 @@
         "lib/netstandard2.0/Humanizer.dll",
         "lib/netstandard2.0/Humanizer.xml",
         "logo.png"
+      ]
+    },
+    "Microsoft.AspNetCore.App.Internal.Assets/10.0.7": {
+      "sha512": "ao3i+ks0uOQ7FWacI1hqHkUczebmXrGkUB63Xhkc34QbSzG9nYBlDv9v5l6rtCrHMsDW+13kZlpJrSj1HXddqg==",
+      "type": "package",
+      "path": "microsoft.aspnetcore.app.internal.assets/10.0.7",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "THIRD-PARTY-NOTICES.TXT",
+        "_framework/blazor.server.js",
+        "_framework/blazor.server.js.map",
+        "_framework/blazor.web.js",
+        "_framework/blazor.web.js.map",
+        "_framework/blazor.webassembly.js",
+        "_framework/blazor.webassembly.js.map",
+        "build/Microsoft.AspNetCore.App.Internal.Assets.props",
+        "build/Microsoft.AspNetCore.App.Internal.Assets.targets",
+        "buildMultiTargeting/Microsoft.AspNetCore.App.Internal.Assets.targets",
+        "buildTransitive/Microsoft.AspNetCore.App.Internal.Assets.targets",
+        "microsoft.aspnetcore.app.internal.assets.10.0.7.nupkg.sha512",
+        "microsoft.aspnetcore.app.internal.assets.nuspec"
       ]
     },
     "Microsoft.AspNetCore.OpenApi/10.0.4": {
@@ -2211,6 +2244,7 @@
   "projectFileDependencyGroups": {
     "net10.0": [
       "Dapper >= 2.1.72",
+      "Microsoft.AspNetCore.App.Internal.Assets >= 10.0.7",
       "Microsoft.AspNetCore.OpenApi >= 10.0.4",
       "Microsoft.Data.SqlClient >= 7.0.1",
       "Microsoft.EntityFrameworkCore >= 10.0.7",
@@ -2273,6 +2307,12 @@
           "Dapper": {
             "target": "Package",
             "version": "[2.1.72, )"
+          },
+          "Microsoft.AspNetCore.App.Internal.Assets": {
+            "suppressParent": "All",
+            "target": "Package",
+            "version": "[10.0.7, )",
+            "autoReferenced": true
           },
           "Microsoft.AspNetCore.OpenApi": {
             "target": "Package",
