@@ -23,17 +23,4 @@
     </Content>
   </ItemGroup>
 
-  <Target Name="BuildFrontend" BeforeTargets="Build;Publish">
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)\DashboardApp" Command="npm install" />
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)\DashboardApp" Command="npm run build" />
-  </Target>
-
-  <Target Name="CopyFrontendToWwwroot" AfterTargets="BuildFrontend">
-    <RemoveDir Directories="$(MSBuildProjectDirectory)\wwwroot\assets" />
-    <ItemGroup>
-      <FrontendDistFiles Include="$(MSBuildProjectDirectory)\DashboardApp\dist\**\*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(FrontendDistFiles)" DestinationFiles="@(FrontendDistFiles->'$(MSBuildProjectDirectory)\wwwroot\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
-  </Target>
-
 </Project>

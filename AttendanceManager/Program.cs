@@ -1,3 +1,4 @@
+using AttendanceManager.Components;
 using AttendanceManager.Data;
 using AttendanceManager.Repository;
 using AttendanceManager.Services;
@@ -26,7 +27,6 @@ if (!string.IsNullOrWhiteSpace(configuredPort) &&
     builder.WebHost.UseUrls($"http://*:{port}");
 }
 
-
 builder.Services.AddSingleton<DbService>();
 builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
@@ -45,38 +45,33 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
 });
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddHttpClient();
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
 
 var app = builder.Build();
 
-var appWebRoot = app.Environment.WebRootPath;
-var defaultIndexPath = appWebRoot is null ? null : Path.Combine(appWebRoot, "index.html");
-// app.Logger.LogInformation("Starting AttendanceManager in {Environment}", app.Environment.EnvironmentName);
-// app.Logger.LogInformation("ContentRootPath={ContentRootPath}, WebRootPath={WebRootPath}, WebRootExists={WebRootExists}", app.Environment.ContentRootPath, appWebRoot, appWebRoot != null && Directory.Exists(appWebRoot));
-// app.Logger.LogInformation("Default index.html path={IndexPath}, Exists={IndexExists}", defaultIndexPath, defaultIndexPath != null && File.Exists(defaultIndexPath));
-// app.Logger.LogInformation("Configured URLs: {Urls}", string.Join(',', app.Urls));
-// app.Logger.LogInformation("Server port env=PORT:{PortEnv}, config=Server:Port:{PortConfig}", Environment.GetEnvironmentVariable("PORT"), builder.Configuration["Server:Port"]);
-
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+else
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    app.UseHsts();
+}
 
+app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
-
-app.UseCors("AllowAll");
-
-app.UseRouting();
-
-app.UseAuthorization();
-
-app.MapControllers(); // MUST come before fallback
-
-app.UseDefaultFiles();
 app.UseStaticFiles();
-
-app.MapFallbackToFile("index.html");
+app.UseCors("AllowAll");
+app.UseRouting();
+app.UseAuthorization();
+app.MapControllers();
+app.UseAntiforgery();
+app.MapStaticAssets();
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
 
 app.Run();

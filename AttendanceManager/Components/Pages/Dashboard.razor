@@ -1,0 +1,381 @@
+@page "/"
+@rendermode InteractiveServer
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Attendance Dashboard</PageTitle>
+
+<div class="dash-shell">
+    <header class="dash-header">
+        <h1 class="dash-title">Attendance Dashboard</h1>
+    </header>
+
+    <main class="dash-main">
+        @if (!string.IsNullOrEmpty(_fatalError))
+        {
+            <p class="dash-error">@_fatalError</p>
+        }
+        else
+        {
+            <section class="dash-cards">
+                @foreach (var card in _cardOrder)
+                {
+                    var active = _activeCard == card;
+                    <button type="button"
+                            class="dash-card @(active ? "dash-card-active" : "")"
+                            @onclick="() => OnCardClickAsync(card)">
+                        <span class="dash-card-label">@CardTitle(card)</span>
+                        <span class="dash-card-value">@CardPrimaryText(card)</span>
+                    </button>
+                }
+            </section>
+
+            <section class="dash-panel">
+                <div class="dash-filters">
+                    <label class="dash-field">
+                        <span class="dash-field-label">From</span>
+                        <input class="dash-input" type="date" value="@_fromDate" @onchange="OnFromDateChangedAsync" />
+                    </label>
+                    <label class="dash-field">
+                        <span class="dash-field-label">To</span>
+                        <input class="dash-input" type="date" value="@_toDate" @onchange="OnToDateChangedAsync" />
+                    </label>
+                    <label class="dash-field">
+                        <span class="dash-field-label">Absent date</span>
+                        <input class="dash-input" type="date" value="@_singleDate" @onchange="OnSingleDateChangedAsync" />
+                    </label>
+                </div>
+
+                <h2 class="dash-panel-title">Staff list — @CardTitle(_activeCard)</h2>
+
+                @if (!string.IsNullOrEmpty(_cardErrors.GetValueOrDefault(_activeCard)))
+                {
+                    <p class="dash-error">@_cardErrors[_activeCard]</p>
+                }
+                else if (!_loaded.GetValueOrDefault(_activeCard))
+                {
+                    <p class="dash-muted">
+                        @(_loading.Contains(_activeCard) || _activeCard == CardKind.Punctual
+                            ? "Loading…"
+                            : "Click the card above to load this report.")
+                    </p>
+                }
+                else
+                {
+                    <div class="dash-table-wrap">
+                        <table class="dash-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Staff number</th>
+                                    <th>Time</th>
+                                    <th>Office</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in CurrentRows())
+                                {
+                                    <tr>
+                                        <td>@row.Name</td>
+                                        <td>@row.StaffNumber</td>
+                                        <td>@row.Time</td>
+                                        <td>@row.OfficeName</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+        }
+    </main>
+</div>
+
+@code {
+    private enum CardKind
+    {
+        Punctual,
+        Late,
+        Night,
+        Statistics,
+        Absent,
+        Unassigned
+    }
+
+    private static readonly CardKind[] _cardOrder =
+    [
+        CardKind.Punctual,
+        CardKind.Late,
+        CardKind.Night,
+        CardKind.Statistics,
+        CardKind.Absent,
+        CardKind.Unassigned
+    ];
+
+    private readonly Dictionary<CardKind, List<AttendanceRow>> _rows = new();
+    private readonly Dictionary<CardKind, bool> _loaded = new();
+    private readonly Dictionary<CardKind, string> _cardErrors = new();
+    private readonly HashSet<CardKind> _loading = new();
+
+    private CardKind _activeCard = CardKind.Punctual;
+    private string _fromDate = DateTime.Today.ToString("yyyy-MM-dd");
+    private string _toDate = DateTime.Today.ToString("yyyy-MM-dd");
+    private string _singleDate = DateTime.Today.ToString("yyyy-MM-dd");
+    private int _statisticsCount;
+    private string? _fatalError;
+
+    private sealed record AttendanceRow(string StaffNumber, string Name, string Time, string OfficeName);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await LoadCardAsync(CardKind.Punctual);
+        }
+        catch (Exception ex)
+        {
+            _fatalError = "Could not load the dashboard. " + ex.Message;
+        }
+    }
+
+    private string CardTitle(CardKind k) => k switch
+    {
+        CardKind.Punctual => "Punctual",
+        CardKind.Late => "Late",
+        CardKind.Night => "Night shift",
+        CardKind.Statistics => "Statistics",
+        CardKind.Absent => "Absent staff",
+        CardKind.Unassigned => "Unassigned office",
+        _ => k.ToString()
+    };
+
+    private string CardPrimaryText(CardKind k)
+    {
+        if (k == CardKind.Punctual)
+        {
+            if (!_loaded.GetValueOrDefault(k)) return "Loading…";
+            return _rows.TryGetValue(k, out var pl) ? pl.Count.ToString() : "0";
+        }
+
+        if (!_loaded.GetValueOrDefault(k))
+            return _loading.Contains(k) ? "Loading…" : "Click to load";
+
+        if (_loading.Contains(k))
+            return "Loading…";
+
+        return k == CardKind.Statistics ? _statisticsCount.ToString() : (_rows.TryGetValue(k, out var list) ? list.Count : 0).ToString();
+    }
+
+    private async Task OnCardClickAsync(CardKind kind)
+    {
+        _activeCard = kind;
+        _cardErrors.Remove(kind);
+        await Task.Yield();
+
+        try
+        {
+            if (kind == CardKind.Unassigned)
+                await LoadUnassignedAsync();
+            else if (!_loaded.GetValueOrDefault(kind))
+                await LoadCardAsync(kind);
+        }
+        catch (Exception)
+        {
+            _cardErrors[kind] = "Could not load this report.";
+        }
+    }
+
+    private async Task OnFromDateChangedAsync(ChangeEventArgs e)
+    {
+        _fromDate = e.Value?.ToString() ?? _fromDate;
+        await OnRangeDatesChangedAsync();
+    }
+
+    private async Task OnToDateChangedAsync(ChangeEventArgs e)
+    {
+        _toDate = e.Value?.ToString() ?? _toDate;
+        await OnRangeDatesChangedAsync();
+    }
+
+    private async Task OnSingleDateChangedAsync(ChangeEventArgs e)
+    {
+        _singleDate = e.Value?.ToString() ?? _singleDate;
+        await OnAbsentDateChangedAsync();
+    }
+
+    private async Task OnRangeDatesChangedAsync()
+    {
+        InvalidateRangeCards();
+        try
+        {
+            await LoadCardAsync(CardKind.Punctual);
+            if (_activeCard != CardKind.Punctual && _activeCard != CardKind.Absent)
+            {
+                if (_activeCard == CardKind.Unassigned)
+                    await LoadUnassignedAsync();
+                else
+                    await LoadCardAsync(_activeCard);
+            }
+        }
+        catch (Exception)
+        {
+            _fatalError = "Could not refresh reports for the selected date range.";
+        }
+    }
+
+    private async Task OnAbsentDateChangedAsync()
+    {
+        _loaded[CardKind.Absent] = false;
+        _rows.Remove(CardKind.Absent);
+        if (_activeCard == CardKind.Absent)
+        {
+            try
+            {
+                await LoadCardAsync(CardKind.Absent);
+            }
+            catch (Exception)
+            {
+                _cardErrors[CardKind.Absent] = "Could not load absent list.";
+            }
+        }
+    }
+
+    private void InvalidateRangeCards()
+    {
+        foreach (var k in new[] { CardKind.Punctual, CardKind.Late, CardKind.Night, CardKind.Statistics, CardKind.Unassigned })
+        {
+            _loaded[k] = false;
+            _rows.Remove(k);
+            _cardErrors.Remove(k);
+        }
+    }
+
+    private IEnumerable<AttendanceRow> CurrentRows()
+    {
+        if (!_rows.TryGetValue(_activeCard, out var list))
+            return Array.Empty<AttendanceRow>();
+        return list;
+    }
+
+    private async Task LoadCardAsync(CardKind kind)
+    {
+        if (_loaded.GetValueOrDefault(kind))
+            return;
+
+        _loading.Add(kind);
+        StateHasChanged();
+        await Task.Yield();
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(Navigation.BaseUri);
+
+            var url = kind switch
+            {
+                CardKind.Punctual => $"/api/v1/attendancereportpunctual?from={Uri.EscapeDataString(_fromDate)}&to={Uri.EscapeDataString(_toDate)}",
+                CardKind.Late => $"/api/v1/attendancereportlate?from={Uri.EscapeDataString(_fromDate)}&to={Uri.EscapeDataString(_toDate)}",
+                CardKind.Night => $"/api/v1/attendancereportnight?from={Uri.EscapeDataString(_fromDate)}&to={Uri.EscapeDataString(_toDate)}",
+                CardKind.Statistics => $"/api/v1/attendancereportstatistics?from={Uri.EscapeDataString(_fromDate)}&to={Uri.EscapeDataString(_toDate)}",
+                CardKind.Absent => $"/api/v1/attendancereportabsent?date={Uri.EscapeDataString(_singleDate)}",
+                _ => throw new InvalidOperationException("Unsupported card kind.")
+            };
+
+            using var response = await client.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            await using var stream = await response.Content.ReadAsStreamAsync();
+            using var doc = await JsonDocument.ParseAsync(stream);
+            var root = doc.RootElement;
+            var data = root.GetProperty("data").EnumerateArray().Select(NormalizeRow).ToList();
+            _rows[kind] = data;
+            if (kind == CardKind.Statistics && root.TryGetProperty("count", out var c) && c.ValueKind == JsonValueKind.Number)
+                _statisticsCount = c.GetInt32();
+            else if (kind == CardKind.Statistics)
+                _statisticsCount = data.Count;
+
+            _loaded[kind] = true;
+            _cardErrors.Remove(kind);
+        }
+        finally
+        {
+            _loading.Remove(kind);
+        }
+    }
+
+    private async Task LoadUnassignedAsync()
+    {
+        if (_loaded.GetValueOrDefault(CardKind.Unassigned))
+            return;
+
+        _loading.Add(CardKind.Unassigned);
+        StateHasChanged();
+        await Task.Yield();
+
+        try
+        {
+            await EnsureLoadedAsync(CardKind.Punctual);
+            await EnsureLoadedAsync(CardKind.Late);
+            await EnsureLoadedAsync(CardKind.Night);
+
+            var combined = _rows[CardKind.Punctual]
+                .Concat(_rows[CardKind.Late])
+                .Concat(_rows[CardKind.Night]);
+
+            var unassigned = combined
+                .Where(x => string.IsNullOrWhiteSpace(x.OfficeName) || x.OfficeName == "N/A")
+                .ToList();
+
+            _rows[CardKind.Unassigned] = unassigned;
+            _loaded[CardKind.Unassigned] = true;
+            _cardErrors.Remove(CardKind.Unassigned);
+        }
+        catch (Exception)
+        {
+            _cardErrors[CardKind.Unassigned] = "Could not build unassigned list (load punctual, late, and night first).";
+        }
+        finally
+        {
+            _loading.Remove(CardKind.Unassigned);
+        }
+    }
+
+    private async Task EnsureLoadedAsync(CardKind kind)
+    {
+        if (!_loaded.GetValueOrDefault(kind))
+            await LoadCardAsync(kind);
+    }
+
+    private static AttendanceRow NormalizeRow(JsonElement row)
+    {
+        var staff = CellString(row, "staff_number", "staff_id", "staff");
+        var name = CellString(row, "name", "staff_name");
+        var time = CellString(row, "time", "entry_time");
+        var office = CellString(row, "office_name", "Office", "Clock_in_office", "region");
+        if (string.IsNullOrWhiteSpace(office))
+            office = "N/A";
+
+        return new AttendanceRow(
+            string.IsNullOrWhiteSpace(staff) ? "" : staff,
+            string.IsNullOrWhiteSpace(name) ? "N/A" : name,
+            string.IsNullOrWhiteSpace(time) ? "N/A" : time,
+            office);
+    }
+
+    private static string CellString(JsonElement row, params string[] keys)
+    {
+        foreach (var k in keys)
+        {
+            if (!row.TryGetProperty(k, out var p))
+                continue;
+            return p.ValueKind switch
+            {
+                JsonValueKind.String => p.GetString() ?? "",
+                JsonValueKind.Number => p.GetRawText(),
+                JsonValueKind.Null => "",
+                _ => p.ToString()
+            };
+        }
+
+        return "";
+    }
+}
