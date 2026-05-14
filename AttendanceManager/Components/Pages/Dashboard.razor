@@ -98,8 +98,7 @@
         Late,
         Night,
         Statistics,
-        Absent,
-        Unassigned
+        Absent
     }
 
     private static readonly CardKind[] _cardOrder =
@@ -108,8 +107,7 @@
         CardKind.Late,
         CardKind.Night,
         CardKind.Statistics,
-        CardKind.Absent,
-        CardKind.Unassigned
+        CardKind.Absent
     ];
 
     private readonly Dictionary<CardKind, List<AttendanceRow>> _rows = new();
@@ -145,7 +143,6 @@
         CardKind.Night => "Night shift",
         CardKind.Statistics => "Statistics",
         CardKind.Absent => "Absent staff",
-        CardKind.Unassigned => "Unassigned office",
         _ => k.ToString()
     };
 
@@ -174,9 +171,7 @@
 
         try
         {
-            if (kind == CardKind.Unassigned)
-                await LoadUnassignedAsync();
-            else if (!_loaded.GetValueOrDefault(kind))
+            if (!_loaded.GetValueOrDefault(kind))
                 await LoadCardAsync(kind);
         }
         catch (Exception)
@@ -211,10 +206,7 @@
             await LoadCardAsync(CardKind.Punctual);
             if (_activeCard != CardKind.Punctual && _activeCard != CardKind.Absent)
             {
-                if (_activeCard == CardKind.Unassigned)
-                    await LoadUnassignedAsync();
-                else
-                    await LoadCardAsync(_activeCard);
+                await LoadCardAsync(_activeCard);
             }
         }
         catch (Exception)
@@ -242,7 +234,7 @@
 
     private void InvalidateRangeCards()
     {
-        foreach (var k in new[] { CardKind.Punctual, CardKind.Late, CardKind.Night, CardKind.Statistics, CardKind.Unassigned })
+        foreach (var k in new[] { CardKind.Punctual, CardKind.Late, CardKind.Night, CardKind.Statistics })
         {
             _loaded[k] = false;
             _rows.Remove(k);
@@ -286,7 +278,9 @@
             await using var stream = await response.Content.ReadAsStreamAsync();
             using var doc = await JsonDocument.ParseAsync(stream);
             var root = doc.RootElement;
-            var data = root.GetProperty("data").EnumerateArray().Select(NormalizeRow).ToList();
+            Console.WriteLine(root.ToString());
+            Console.WriteLine(root.GetProperty("data").ToString());
+            List<AttendanceRow>? data = root.GetProperty("data").EnumerateArray().Select(NormalizeRow).ToList();
             _rows[kind] = data;
             if (kind == CardKind.Statistics && root.TryGetProperty("count", out var c) && c.ValueKind == JsonValueKind.Number)
                 _statisticsCount = c.GetInt32();
@@ -302,43 +296,6 @@
         }
     }
 
-    private async Task LoadUnassignedAsync()
-    {
-        if (_loaded.GetValueOrDefault(CardKind.Unassigned))
-            return;
-
-        _loading.Add(CardKind.Unassigned);
-        StateHasChanged();
-        await Task.Yield();
-
-        try
-        {
-            await EnsureLoadedAsync(CardKind.Punctual);
-            await EnsureLoadedAsync(CardKind.Late);
-            await EnsureLoadedAsync(CardKind.Night);
-
-            var combined = _rows[CardKind.Punctual]
-                .Concat(_rows[CardKind.Late])
-                .Concat(_rows[CardKind.Night]);
-
-            var unassigned = combined
-                .Where(x => string.IsNullOrWhiteSpace(x.OfficeName) || x.OfficeName == "N/A")
-                .ToList();
-
-            _rows[CardKind.Unassigned] = unassigned;
-            _loaded[CardKind.Unassigned] = true;
-            _cardErrors.Remove(CardKind.Unassigned);
-        }
-        catch (Exception)
-        {
-            _cardErrors[CardKind.Unassigned] = "Could not build unassigned list (load punctual, late, and night first).";
-        }
-        finally
-        {
-            _loading.Remove(CardKind.Unassigned);
-        }
-    }
-
     private async Task EnsureLoadedAsync(CardKind kind)
     {
         if (!_loaded.GetValueOrDefault(kind))
@@ -347,7 +304,7 @@
 
     private static AttendanceRow NormalizeRow(JsonElement row)
     {
-        var staff = CellString(row, "staff_number", "staff_id", "staff");
+        var staff = CellString(row, "staff_number", "staff_id", "staff", "StaffNumber", "STAFF_ID");
         var name = CellString(row, "name", "staff_name");
         var time = CellString(row, "time", "entry_time");
         var office = CellString(row, "office_name", "Office", "Clock_in_office", "region");

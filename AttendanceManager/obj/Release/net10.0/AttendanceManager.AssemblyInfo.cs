@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AttendanceManager")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+83ae4827ec8994a2bf5b84727513f70061733ee3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a5cc21e447bdd533084ad045fc0a59aeb51bbb65")]
 [assembly: System.Reflection.AssemblyProductAttribute("AttendanceManager")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AttendanceManager")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

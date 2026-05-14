@@ -1,8 +1,5 @@
 C:\Users\chiagoziem.ofuani\Desktop\PHED Repo\AttendanceManager\AttendanceManager\bin\Debug\net10.0\appsettings.Development.json
 C:\Users\chiagoziem.ofuani\Desktop\PHED Repo\AttendanceManager\AttendanceManager\bin\Debug\net10.0\appsettings.json
-C:\Users\chiagoziem.ofuani\Desktop\PHED Repo\AttendanceManager\AttendanceManager\bin\Debug\net10.0\DashboardApp\package-lock.json
-C:\Users\chiagoziem.ofuani\Desktop\PHED Repo\AttendanceManager\AttendanceManager\bin\Debug\net10.0\DashboardApp\package.json
-C:\Users\chiagoziem.ofuani\Desktop\PHED Repo\AttendanceManager\AttendanceManager\bin\Debug\net10.0\DashboardApp\tsconfig.json
 C:\Users\chiagoziem.ofuani\Desktop\PHED Repo\AttendanceManager\AttendanceManager\bin\Debug\net10.0\AttendanceManager.staticwebassets.runtime.json
 C:\Users\chiagoziem.ofuani\Desktop\PHED Repo\AttendanceManager\AttendanceManager\bin\Debug\net10.0\AttendanceManager.staticwebassets.endpoints.json
 C:\Users\chiagoziem.ofuani\Desktop\PHED Repo\AttendanceManager\AttendanceManager\bin\Debug\net10.0\AttendanceManager.exe
